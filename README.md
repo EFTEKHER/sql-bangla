@@ -8,4 +8,4 @@ Static site — কোনো build লাগে না। `index.html` খুল
 
 ## 🛢️ SQL Server (MSSQL)-এ practice
 
-`bankdb-mssql.sql` SSMS / Azure Data Studio-তে খুলে F5 চাপো — বইয়ের BankDB database তৈরি হবে (সব table + ~১১,০০০ row data)। বিস্তারিত: সাইটের **MSSQL Practice** পেজ।
+`bankdb-simple.sql` (ছোট, সব data হাতে লেখা `VALUES` — দেখে লেখার জন্য) বা `bankdb-mssql.sql` (বড়, ১০,৮০৯ row) SSMS / Azure Data Studio-তে খুলে F5 চাপো — বইয়ের BankDB database তৈরি হবে (সব table + ~১১,০০০ row data)। বিস্তারিত: সাইটের **MSSQL Practice** পেজ।

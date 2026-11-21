@@ -379,3 +379,5 @@ td.hit { outline: 2px solid var(--pri); outline-offset: -2px; background: var(--
 #steps .tbl td:nth-child(2) code, #steps .tbl td:first-child code { white-space: nowrap; }
 #steps .codebox pre.code { max-height: 520px; }
 @media (max-width: 900px) { .card > .tbl, .card .bn + .tbl, #steps .tbl { display: block; overflow-x: auto; white-space: nowrap; } #steps .tbl td:last-child { white-space: normal; min-width: 180px; } }
+
+.big-seg { margin: 12px 0 6px; } .big-seg button { padding: 8px 16px; font-size: .95rem; }

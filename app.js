@@ -298,50 +298,69 @@ function copyText(text) {
     try { document.execCommand('copy') ? res() : rej(); } catch (e) { rej(e); } finally { ta.remove(); }
   });
 }
-// ─── Schema ও Data page (copy-paste করে local MSSQL-এ বানাও) ───
+// ─── Schema ও Data page (copy-paste / হাতে লিখে local MSSQL-এ বানাও) ───
+const SCHEMA_VARIANTS = {
+  simple: { file: 'bankdb-simple.sql', label: '✍️ ছোট version — হাতে লেখার জন্য', note: 'সব data সরাসরি <code>INSERT … VALUES</code>-এ লেখা — দেখে দেখে হাতে লেখা যায়। মোট ৯৪ row। বইয়ের প্রায় সব উদাহরণ এতেই চলে।', counts: 'Branches 6 · Employees 12 · Customers 12 · Accounts 13 · Transactions 42 · Loans 6 · CustomerStaging 3' },
+  big: { file: 'bankdb-mssql.sql', label: '📦 বড় version — ১০,৮০৯ row', note: 'ছোট version-এর data + <code>INSERT … SELECT</code> দিয়ে generate করা অনেক data। Index / execution plan / performance (Chapter 20–23) practice-এর জন্য। হাতে লেখার দরকার নেই — কপি করো।', counts: 'Branches 6 · Employees 12 · Customers 200 · Accounts 267 · Transactions 10,809 · Loans 32 · CustomerStaging 3' },
+};
+// ধাপের title দেখে কোন doc দেখাবে ঠিক হয়
 const SCHEMA_DOC = [
-  { learn: 'CREATE DATABASE · ALTER DATABASE · USE · GO (batch separator)', why: 'BankDB নামে খালি database বানায়। আগে থাকলে মুছে দেয় — তাই যতবার খুশি নতুন করে শুরু করা যায়।' },
-  { table: 'Branches', why: 'ব্যাংকের শাখা। অন্য সব table এর সাথে যুক্ত হয় — তাই সবার আগে।', learn: 'IDENTITY · PRIMARY KEY · UNIQUE · multi-row INSERT',
-    cols: [['BranchId', 'INT IDENTITY', 'PK', 'শাখার internal নম্বর — নিজে থেকে 1, 2, 3… হয়'], ['BranchCode', 'CHAR(5)', 'UNIQUE', "মানুষের জন্য কোড, যেমন 'DHK01' (ঠিক ৫ অক্ষর)"], ['BranchName', 'NVARCHAR(100)', '', 'শাখার নাম (N = Unicode, বাংলাও রাখা যায়)'], ['City', 'NVARCHAR(60)', '', 'শহর'], ['OpenedOn', 'DATE', '', 'কবে খুলেছে (শুধু তারিখ, সময় না)']] },
-  { table: 'Employees', why: 'শাখার কর্মী। ManagerId নিজের table-কেই দেখায় — তাই CEO → CTO → Dev Lead → Developer গাছ তৈরি হয়।', learn: 'FOREIGN KEY · self-reference · CHECK · NULL',
+  { key: /Database/, learn: 'CREATE DATABASE · ALTER DATABASE · USE · GO (batch separator)', why: 'BankDB নামে খালি database বানায়। আগে থাকলে মুছে দেয় — তাই যতবার খুশি নতুন করে শুরু করা যায়।' },
+  { key: /Branches/, why: 'ব্যাংকের শাখা। অন্য table গুলো এর সাথে যুক্ত হয় — তাই সবার আগে।', learn: 'IDENTITY · PRIMARY KEY · UNIQUE · multi-row INSERT',
+    cols: [['BranchId', 'INT IDENTITY', 'PK', 'শাখার internal নম্বর — নিজে থেকে 1, 2, 3… হয় (INSERT-এ লিখতে হয় না)'], ['BranchCode', 'CHAR(5)', 'UNIQUE', "মানুষের জন্য কোড, যেমন 'DHK01' (ঠিক ৫ অক্ষর)"], ['BranchName', 'NVARCHAR(100)', '', "শাখার নাম (N'…' = Unicode, বাংলাও রাখা যায়)"], ['City', 'NVARCHAR(60)', '', 'শহর'], ['OpenedOn', 'DATE', '', "কবে খুলেছে — '2005-03-01' (বছর-মাস-দিন)"]] },
+  { key: /Employees/, why: 'শাখার কর্মী। ManagerId নিজের table-কেই দেখায় — তাই CEO → CTO → Dev Lead → Developer গাছ তৈরি হয়।', learn: 'FOREIGN KEY · self-reference · CHECK · NULL',
     cols: [['EmployeeId', 'INT IDENTITY', 'PK', 'কর্মীর নম্বর'], ['BranchId', 'INT', 'FK → Branches', 'কোন শাখায় কাজ করে'], ['ManagerId', 'INT NULL', 'FK → Employees', 'Boss-এর EmployeeId; CEO-র NULL'], ['FullName', 'NVARCHAR(120)', '', 'নাম'], ['Designation', 'NVARCHAR(60)', '', 'পদবি'], ['Salary', 'DECIMAL(12,2)', 'CHECK > 0', 'বেতন — টাকা তাই DECIMAL, FLOAT না'], ['HiredOn', 'DATE', '', 'যোগদানের তারিখ']] },
-  { table: 'Customers', why: 'ব্যাংকের গ্রাহক। প্রথম ১২ জন হাতে লেখা INSERT; বাকি ১৮৮ জন একটা INSERT … SELECT দিয়ে একবারে তৈরি।', learn: 'DEFAULT · CHECK (… IN …) · NULL কলাম · INSERT … SELECT · ROW_NUMBER · CHOOSE',
+  { key: /Customers/, why: 'ব্যাংকের গ্রাহক। Nusrat (3) আর Shakil (12)-এর কোনো account নেই — JOIN শেখার জন্য।', whyBig: 'প্রথম ১২ জন হাতে লেখা; বাকি ১৮৮ জন একটা INSERT … SELECT দিয়ে একবারে তৈরি।', learn: 'DEFAULT · CHECK (… IN …) · NULL কলাম',
     cols: [['CustomerId', 'INT IDENTITY', 'PK', 'গ্রাহক নম্বর'], ['NationalId', 'VARCHAR(20)', 'UNIQUE', 'NID — একই NID দুইবার হবে না'], ['FullName', 'NVARCHAR(120)', '', 'নাম'], ['Email', 'NVARCHAR(160) NULL', '', 'ইমেইল — না থাকলে NULL'], ['Phone', 'VARCHAR(20) NULL', '', 'ফোন — না থাকলে NULL'], ['City', 'NVARCHAR(60) NULL', '', 'শহর'], ['KycStatus', 'VARCHAR(12)', "DEFAULT 'PENDING' · CHECK", 'PENDING / VERIFIED / REJECTED'], ['CreatedAt', 'DATETIME2(3)', 'DEFAULT SYSUTCDATETIME()', 'কবে তৈরি (UTC সময়)']] },
-  { table: 'Accounts', why: 'গ্রাহকের অ্যাকাউন্ট। এক customer-এর অনেক account (one-to-many)। Balance হলো সব লেনদেনের যোগফলের কপি (STEP 8-এ হিসাব হয়)।', learn: 'একাধিক FK · BIGINT · CHECK দুই কলামে · WITH (CTE) + INSERT',
-    cols: [['AccountId', 'BIGINT IDENTITY', 'PK', 'Internal নম্বর (JOIN এটা দিয়ে)'], ['AccountNumber', 'CHAR(13)', 'UNIQUE', "গ্রাহক যে নম্বর জানে, যেমন '1001000000001'"], ['CustomerId', 'INT', 'FK → Customers', 'কার অ্যাকাউন্ট'], ['BranchId', 'INT', 'FK → Branches', 'কোন শাখার'], ['AccountType', 'VARCHAR(10)', 'CHECK', 'SAVINGS / CURRENT / FD'], ['Balance', 'DECIMAL(19,4)', 'DEFAULT 0', 'বর্তমান টাকা'], ['Currency', 'CHAR(3)', "DEFAULT 'BDT'", 'মুদ্রা'], ['Status', 'VARCHAR(10)', 'CHECK', 'ACTIVE / DORMANT / CLOSED'], ['OpenedOn', 'DATE', '', 'খোলার তারিখ'], ['ClosedOn', 'DATE NULL', 'CHECK ≥ OpenedOn', 'বন্ধের তারিখ; খোলা থাকলে NULL']] },
-  { table: 'Transactions', why: 'প্রতিটা টাকা জমা (CREDIT) বা উত্তোলন (DEBIT)। সবচেয়ে বড় table — index আর performance শেখার জায়গা।', learn: 'DATETIME2 · CROSS APPLY · DATEADD · CASE · বড় data generate',
-    cols: [['TxnId', 'BIGINT IDENTITY', 'PK', 'লেনদেন নম্বর'], ['AccountId', 'BIGINT', 'FK → Accounts', 'কোন অ্যাকাউন্টে'], ['TxnDate', 'DATETIME2(3)', '', 'তারিখ + সময় (মিলিসেকেন্ড পর্যন্ত)'], ['TxnType', 'VARCHAR(10)', 'CHECK', 'DEBIT (টাকা বের) / CREDIT (টাকা জমা)'], ['Channel', 'VARCHAR(12)', '', 'ATM / ONLINE / BRANCH / POS (কিছু WEB)'], ['Amount', 'DECIMAL(19,4)', 'CHECK > 0', 'পরিমাণ — সবসময় ধনাত্মক'], ['BalanceAfter', 'DECIMAL(19,4)', '', 'এই লেনদেনের পরে balance'], ['Reference', 'NVARCHAR(80) NULL', '', 'নোট; POS-এ JSON, যেমন {"merchant":"Daraz"}']] },
-  { table: 'Loans', why: 'গ্রাহকের ঋণ। Customers আর Branches দুটোর সাথেই যুক্ত।', learn: 'DECIMAL(5,2) সুদের হার · INSERT … SELECT … WHERE',
+  { key: /Accounts/, why: 'গ্রাহকের অ্যাকাউন্ট। এক customer-এর অনেক account (one-to-many)। Balance = সব লেনদেনের পরে এখন কত টাকা।', whyBig: 'গ্রাহকের অ্যাকাউন্ট। এখানে Balance হলো opening balance — STEP 8-এ লেনদেন থেকে আসল balance হিসাব হয়।', learn: 'একাধিক FK · BIGINT · দুই কলামের CHECK',
+    cols: [['AccountId', 'BIGINT IDENTITY', 'PK', 'Internal নম্বর (JOIN এটা দিয়ে)'], ['AccountNumber', 'CHAR(13)', 'UNIQUE', "গ্রাহক যে নম্বর জানে, যেমন '1001000000001'"], ['CustomerId', 'INT', 'FK → Customers', 'কার অ্যাকাউন্ট'], ['BranchId', 'INT', 'FK → Branches', 'কোন শাখার'], ['AccountType', 'VARCHAR(10)', 'CHECK', 'SAVINGS / CURRENT / FD'], ['Balance', 'DECIMAL(19,4)', 'DEFAULT 0', 'বর্তমান টাকা'], ['Currency', 'CHAR(3)', "DEFAULT 'BDT'", 'মুদ্রা (INSERT-এ না লিখলে BDT)'], ['Status', 'VARCHAR(10)', 'CHECK', 'ACTIVE / DORMANT / CLOSED'], ['OpenedOn', 'DATE', '', 'খোলার তারিখ'], ['ClosedOn', 'DATE NULL', 'CHECK ≥ OpenedOn', 'বন্ধের তারিখ; খোলা থাকলে NULL']] },
+  { key: /Transactions/, why: 'প্রতিটা টাকা জমা (CREDIT) বা উত্তোলন (DEBIT)। Account অনুযায়ী সাজানো — BalanceAfter মিলিয়ে দেখো: CREDIT হলে বাড়ে, DEBIT হলে কমে।', whyBig: 'কিছু বিশেষ row হাতে লেখা + ~১০,৮০০ row generate করা। BalanceAfter আপাতত 0, STEP 8-এ ঠিক হয়।', learn: 'DATETIME2 (তারিখ + সময়) · NULL Reference · JSON text',
+    cols: [['TxnId', 'BIGINT IDENTITY', 'PK', 'লেনদেন নম্বর'], ['AccountId', 'BIGINT', 'FK → Accounts', 'কোন অ্যাকাউন্টে'], ['TxnDate', 'DATETIME2(3)', '', "তারিখ + সময়, যেমন '2026-01-20 10:00:00'"], ['TxnType', 'VARCHAR(10)', 'CHECK', 'DEBIT (টাকা বের) / CREDIT (টাকা জমা)'], ['Channel', 'VARCHAR(12)', '', 'ATM / ONLINE / BRANCH / POS / WEB'], ['Amount', 'DECIMAL(19,4)', 'CHECK > 0', 'পরিমাণ — সবসময় ধনাত্মক'], ['BalanceAfter', 'DECIMAL(19,4)', '', 'এই লেনদেনের পরে balance'], ['Reference', 'NVARCHAR(80) NULL', '', 'নোট; POS-এ JSON, যেমন {"merchant":"Daraz"}']] },
+  { key: /Loans/, why: 'গ্রাহকের ঋণ। Customers আর Branches দুটোর সাথেই যুক্ত। Rahim-এর ৩টা loan + ২টা account → fan-out bug দেখার জন্য।', learn: 'DECIMAL(5,2) সুদের হার',
     cols: [['LoanId', 'INT IDENTITY', 'PK', 'ঋণ নম্বর'], ['CustomerId', 'INT', 'FK → Customers', 'কার ঋণ'], ['BranchId', 'INT', 'FK → Branches', 'কোন শাখা থেকে'], ['Principal', 'DECIMAL(19,4)', '', 'মূল টাকা'], ['InterestRate', 'DECIMAL(5,2)', '', 'সুদের হার %, যেমন 9.50'], ['TermMonths', 'INT', '', 'কত মাসের'], ['DisbursedOn', 'DATE', '', 'কবে দেওয়া হয়েছে'], ['Status', 'VARCHAR(12)', '', 'ACTIVE / CLOSED / DEFAULTED']] },
-  { table: 'Support tables', why: 'বইয়ের কিছু উদাহরণ এখানে লেখে: ArchivedTransactions (Ch 12 archive), CustomerStaging (Ch 12 MERGE — ৩টা row দেওয়া আছে), AccountAudit (Ch 15 trigger), ErrorLog (Ch 18 CATCH)।', learn: 'inline PRIMARY KEY · staging table',
-    cols: [['ArchivedTransactions', 'TxnId, AccountId, TxnDate, Amount', '', 'পুরনো লেনদেন সরিয়ে রাখার জায়গা'], ['CustomerStaging', 'NationalId, FullName, Email, City', '', 'বাইরে থেকে আসা data — MERGE দিয়ে Customers-এ মেলাও'], ['AccountAudit', 'AccountId, Old/New Balance, Old/New Status, ChangedBy, ChangedAt', '', 'কে কখন balance বদলেছে'], ['ErrorLog', 'ErrorNumber, ErrorMessage, ErrorProcedure, ErrorLine, LoggedAt', '', 'Procedure-এর error-এর log']] },
-  { why: 'প্রতিটা লেনদেনের পরে balance কত হলো (BalanceAfter) আর অ্যাকাউন্টের বর্তমান Balance — দুটোই লেনদেন থেকে হিসাব করে বসায়।', learn: 'SUM() OVER (… ROWS …) running total · SELECT … INTO #temp · UPDATE … FROM … JOIN · CROSS APPLY TOP (1)' },
-  { why: 'সব ঠিকঠাক লোড হলো কিনা দেখায়: Branches 6 · Employees 12 · Customers 200 · Accounts 267 · Transactions 10,809 · Loans 32 · CustomerStaging 3।', learn: 'UNION ALL দিয়ে অনেক COUNT এক result-এ' },
+  { key: /Support/, why: 'বইয়ের কিছু উদাহরণ এখানে লেখে। CustomerStaging-এ MERGE practice-এর ৩টা row আছে।', learn: 'inline PRIMARY KEY · staging table',
+    cols: [['ArchivedTransactions', 'TxnId, AccountId, TxnDate, Amount', 'Ch 12', 'পুরনো লেনদেন সরিয়ে রাখার জায়গা'], ['CustomerStaging', 'NationalId, FullName, Email, City', 'Ch 12', 'বাইরে থেকে আসা data — MERGE দিয়ে Customers-এ মেলাও'], ['AccountAudit', 'AccountId, Old/New Balance, Old/New Status, …', 'Ch 15', 'Trigger লেখে: কে কখন balance বদলেছে'], ['ErrorLog', 'ErrorNumber, ErrorMessage, ErrorLine, …', 'Ch 18', 'Procedure-এর error-এর log']] },
+  { key: /Balance/, why: 'প্রতিটা লেনদেনের পরে balance কত হলো (BalanceAfter) আর অ্যাকাউন্টের বর্তমান Balance — দুটোই লেনদেন থেকে হিসাব করে বসায়।', learn: 'SUM() OVER (… ROWS …) running total · SELECT … INTO #temp · UPDATE … FROM … JOIN · CROSS APPLY TOP (1)' },
+  { key: /যাচাই/, why: 'সব ঠিকঠাক লোড হলো কিনা দেখায় — প্রতিটা table-এ কত row।', learn: 'UNION ALL দিয়ে অনেক COUNT এক result-এ' },
 ];
+let schemaVariant = 'simple';
 function schemaPage() {
-  $('#main').innerHTML = `<section class="hero sm"><h1>📐 পুরো Schema ও Data — copy-paste করে বানাও</h1>
-    <p>BankDB database-এর প্রতিটা table আলাদা ধাপে: <b>table কী, প্রতিটা কলামের মানে</b>, আর <b>CREATE TABLE + INSERT</b> code। ধাপ ০ থেকে ৯ পর্যন্ত <b>ক্রমানুসারে</b> কপি করে নিজের SSMS-এ চালাও — শেষে বইয়ের পুরো database তোমার কাছে।</p>
-    <div class="hero-btns"><button class="btn pri lg" id="copyall">📋 সব ধাপ একসাথে কপি</button><a class="btn lg" href="bankdb-mssql.sql" download>⬇️ .sql file ডাউনলোড</a><a class="btn lg" href="#/mssql">🛢️ SQL Server setup</a></div></section>
+  $('#main').innerHTML = `<section class="hero sm"><h1>📐 পুরো Schema ও Data — দেখে লেখো, কপি করো</h1>
+    <p>BankDB database-এর প্রতিটা table আলাদা ধাপে: <b>table কী, প্রতিটা কলামের মানে</b>, আর <b>CREATE TABLE + INSERT</b> code। ধাপগুলো <b>ক্রমানুসারে</b> নিজের SSMS-এ লেখো বা কপি করে চালাও — শেষে বইয়ের পুরো database তোমার কাছে।</p>
+    <div class="seg big-seg" id="variant">${Object.entries(SCHEMA_VARIANTS).map(([k, v]) => `<button data-v="${k}">${v.label}</button>`).join('')}</div>
+    <div id="variantnote" class="bn"></div>
+    <div class="hero-btns"><button class="btn pri lg" id="copyall">📋 সব ধাপ একসাথে কপি</button><a class="btn lg" id="dl" download>⬇️ .sql file ডাউনলোড</a></div></section>
     <section class="card"><h2>🗺️ Table গুলোর সম্পর্ক</h2><div class="bn">Table-এ ক্লিক করো — কলাম আর কার সাথে যুক্ত দেখো। FK (foreign key) মানে "অন্য table-এর এই row-কে দেখায়"। তাই <b>parent আগে, child পরে</b> বানাতে হয় — ধাপের order এই কারণেই।</div><div class="viz" id="schemaviz"></div>
       <div class="mem"><b>🧠 মনে রাখো</b><div>Branches → Employees · Customers → Accounts → Transactions · Customers + Branches → Loans<br>১ Customer → অনেক Account → অনেক Transaction (one-to-many)</div></div></section>
-    <section class="card"><h2>✅ কীভাবে করবে</h2><div class="bn">① SSMS-এ <b>New Query</b> খোলো ② নিচে ধাপ ০-এর <b>📋 কপি</b> চাপো → paste → <code>F5</code> ③ তারপর ধাপ ১, ২, ৩… একইভাবে।<br>প্রতিটা ধাপ <code>USE BankDB;</code> দিয়ে শুরু, তাই চাইলে প্রতিটা আলাদা query window-এ চালাতে পারো। ভুল হলে? ধাপ ০ আবার চালাও — সব মুছে নতুন করে শুরু।</div></section>
+    <section class="card"><h2>✅ কীভাবে করবে</h2><div class="bn">① SSMS-এ <b>New Query</b> খোলো ② ধাপ ০-এর code <b>নিজে লেখো</b> (বা 📋 কপি) → <code>F5</code> ③ তারপর ধাপ ১, ২, ৩… একইভাবে।<br>✍️ হাতে লেখার টিপস: আগে <b>কলামের অভিধান</b> পড়ো, তারপর CREATE TABLE লেখো। INSERT-এ প্রতিটা row-এর value কলামের <b>একই ক্রমে</b>; text <code>'…'</code>-এর ভিতরে, সংখ্যা quote ছাড়া, খালি মান <code>NULL</code>।<br>প্রতিটা ধাপ <code>USE BankDB;</code> দিয়ে শুরু। ভুল হলে? ধাপ ০ আবার চালাও — সব মুছে নতুন করে শুরু।</div></section>
     <div id="steps"><div class="card muted">লোড হচ্ছে…</div></div>`;
   V.schema($('#schemaviz'));
-  fetch('bankdb-mssql.sql').then(r => { if (!r.ok) throw 0; return r.text(); }).then(sql => {
+  $$('#variant button').forEach(b => b.onclick = () => { schemaVariant = b.dataset.v; store.set('schemaVariant', schemaVariant); drawSteps(); });
+  schemaVariant = store.get('schemaVariant', 'simple');
+  drawSteps();
+}
+function drawSteps() {
+  const v = SCHEMA_VARIANTS[schemaVariant];
+  $$('#variant button').forEach(b => b.classList.toggle('on', b.dataset.v === schemaVariant));
+  $('#variantnote').innerHTML = `${v.note}<br><span class="muted">${v.counts}</span>`;
+  $('#dl').setAttribute('href', v.file);
+  $('#steps').innerHTML = '<div class="card muted">লোড হচ্ছে…</div>';
+  fetch(v.file).then(r => { if (!r.ok) throw 0; return r.text(); }).then(sql => {
     const parts = sql.split(/(?=-- ─{69}\n-- ▶ STEP )/).filter(p => p.includes('▶ STEP'));
     parts[parts.length - 1] = parts[parts.length - 1].split('/* =====')[0];
     const all = parts.join('\n');
     $('#steps').innerHTML = parts.map((code, i) => {
-      const d = SCHEMA_DOC[i] || {};
       const title = (code.match(/▶ STEP \d+: (.+)/) || [])[1] || '';
+      const d = SCHEMA_DOC.find(x => x.key.test(title)) || {};
+      const why = schemaVariant === 'big' && d.whyBig ? d.whyBig : d.why;
       const creates = (code.match(/CREATE TABLE dbo\.\w+ \([\s\S]*?\n\);/g) || []);
       return `<section class="card sec" id="step-${i}"><h2><span class="stepno">${BN(i)}</span> ${title}</h2>
-        ${d.why ? `<div class="bn">${d.why}</div>` : ''}
+        ${why ? `<div class="bn">${why}</div>` : ''}
         ${d.learn ? `<div class="learn">📚 এই ধাপে শিখবে: <b>${d.learn}</b></div>` : ''}
         ${d.cols ? tbl(['কলাম', 'Type', 'Constraint', 'মানে'], d.cols.map(c => [`<code>${c[0]}</code>`, `<code>${c[1]}</code>`, c[2] ? `<span class="pill">${c[2]}</span>` : '', c[3]])) : ''}
-        <div class="codebox" data-i="${i}"><div class="codebar"><span>ধাপ ${BN(i)} · ${code.split('\n').length} লাইন</span><span>${creates.length ? `<button class="btn xs cponly" data-i="${i}">📋 শুধু CREATE TABLE</button>` : ''}<button class="btn xs pri cpstep" data-i="${i}">📋 পুরো ধাপ কপি</button></span></div><pre class="code">${hl(code)}</pre></div>
+        <div class="codebox"><div class="codebar"><span>ধাপ ${BN(i)} · ${code.split('\n').length} লাইন</span><span>${creates.length ? `<button class="btn xs cponly" data-i="${i}">📋 শুধু CREATE TABLE</button>` : ''}<button class="btn xs pri cpstep" data-i="${i}">📋 পুরো ধাপ কপি</button></span></div><pre class="code">${hl(code)}</pre></div>
       </section>`;
-    }).join('') + `<section class="card"><h2>🎉 শেষ!</h2><div class="bn">এখন যেকোনো অধ্যায় খোলো, code কপি করে SSMS-এ চালাও। প্রথম query হিসেবে এটা চেষ্টা করো:</div><pre class="code">${hl("USE BankDB;\nSELECT TOP (10) c.FullName, a.AccountNumber, a.AccountType, a.Balance\nFROM dbo.Customers AS c\nJOIN dbo.Accounts  AS a ON a.CustomerId = c.CustomerId\nORDER BY a.Balance DESC;")}</pre></section>`;
+    }).join('') + `<section class="card"><h2>🎉 শেষ!</h2><div class="bn">এখন যেকোনো অধ্যায় খোলো, code লিখে বা কপি করে SSMS-এ চালাও। প্রথম query হিসেবে এটা চেষ্টা করো:</div><pre class="code">${hl("USE BankDB;\nSELECT TOP (10) c.FullName, a.AccountNumber, a.AccountType, a.Balance\nFROM dbo.Customers AS c\nJOIN dbo.Accounts  AS a ON a.CustomerId = c.CustomerId\nORDER BY a.Balance DESC;")}</pre></section>`;
     const copy = (btn, text) => copyText(text).then(() => { const o = btn.textContent; btn.textContent = '✓ কপি হয়েছে'; setTimeout(() => btn.textContent = o, 1500); }, () => alert('কপি হয়নি — code select করে Ctrl+C চাপো'));
     $$('.cpstep').forEach(b => b.onclick = () => copy(b, parts[+b.dataset.i]));
     $$('.cponly').forEach(b => b.onclick = () => copy(b, 'USE BankDB;\nGO\n\n' + parts[+b.dataset.i].match(/CREATE TABLE dbo\.\w+ \([\s\S]*?\n\);/g).join('\n\n') + '\nGO\n'));
@@ -355,7 +374,7 @@ function mssqlPage() {
   const docker = 'docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Practice!Pass123" -p 1433:1433 --name mssql -d mcr.microsoft.com/mssql/server:2022-latest';
   $('#main').innerHTML = `<section class="hero sm"><h1>🛢️ SQL Server (MSSQL)-এ practice</h1>
     <p>বইয়ের সব code SQL Server-এর (T-SQL)। একটা script চালালেই বইয়ের <b>BankDB</b> database তৈরি হবে — সব table, constraint আর ১১,০০০+ row data সহ। তারপর যেকোনো অধ্যায়ের code কপি করে SSMS-এ চালাও।</p>
-    <div class="hero-btns"><a class="btn pri lg" href="#/schema">📐 ধাপে ধাপে copy-paste (table অনুযায়ী)</a><a class="btn lg" href="bankdb-mssql.sql" download>⬇️ bankdb-mssql.sql ডাউনলোড</a><button class="btn lg" id="copyscript">📋 পুরো script কপি</button></div></section>
+    <div class="hero-btns"><a class="btn pri lg" href="#/schema">📐 ধাপে ধাপে copy-paste (table অনুযায়ী)</a><a class="btn lg" href="bankdb-simple.sql" download>⬇️ ছোট version (.sql)</a><a class="btn lg" href="bankdb-mssql.sql" download>⬇️ বড় version (.sql)</a><button class="btn lg" id="copyscript">📋 পুরো script কপি</button></div></section>
 
     <section class="card"><h2>① SQL Server install (একবারই)</h2>
       <div class="seg" id="ostabs"><button class="on" data-os="win">🪟 Windows</button><button data-os="mac">🍎 Mac / 🐧 Linux</button></div>
