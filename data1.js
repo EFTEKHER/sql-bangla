@@ -116,7 +116,8 @@ ORDER BY TxnCount DESC;`,
       t: "DDL (CREATE TABLE)",
       bn: "Accounts table — দেখো প্রতিটা লাইন একটা সিদ্ধান্ত: PK, UNIQUE, FK, CHECK।",
       en: "Each clause is a decision.",
-      code: `CREATE TABLE dbo.Accounts (
+      code: `-- ℹ️ BankDB setup script-এ এটা আগেই তৈরি — আবার চালালে 'already exists' error হবে
+CREATE TABLE dbo.Accounts (
   AccountId     BIGINT        NOT NULL IDENTITY(1,1),
   AccountNumber CHAR(13)      NOT NULL,
   CustomerId    INT           NOT NULL,
@@ -147,7 +148,8 @@ ORDER BY TxnCount DESC;`,
       t: "Sample data (seed)",
       bn: "Multi-row INSERT — একটা statement-এ অনেক row। টাকার পরিমাণ সব <b>Tk</b>-তে।",
       en: "Seed data for running the examples.",
-      code: `INSERT INTO dbo.Branches (BranchCode, BranchName, City, OpenedOn)
+      code: `-- ℹ️ BankDB setup script-এ এগুলো আগেই আছে — আবার চালালে duplicate key error হবে
+INSERT INTO dbo.Branches (BranchCode, BranchName, City, OpenedOn)
 VALUES ('DHK01', N'Gulshan Corporate', N'Dhaka', '2005-03-01'),
        ('DHK02', N'Motijheel Main',    N'Dhaka', '1998-07-15'),
        ('CTG01', N'Agrabad',           N'Chattogram', '2001-01-10');`,
@@ -347,7 +349,10 @@ LIMIT 3 OFFSET 3;`
       t: "Keyset Pagination — গভীর page-এর জন্য",
       bn: "OFFSET হলো O(n): page ৫০০০ আনতে ৯৯,৯৮০ row পড়ে ফেলে দেয়! Keyset: আগের page-এর শেষ row-এর key পাঠাও → প্রতিটা page page-1-এর মতোই সস্তা। Slider টানো 👇",
       en: "OFFSET cost grows linearly; keyset pagination stays flat.",
-      code: `SELECT TOP (20) AccountNumber, Balance, AccountId
+      code: `-- practice: আগের page-এর শেষ row-এর মান (app এগুলো পাঠাবে)
+DECLARE @LastBalance DECIMAL(19,4) = 500000, @LastAccountId BIGINT = 0;
+
+SELECT TOP (20) AccountNumber, Balance, AccountId
 FROM dbo.Accounts
 WHERE (Balance < @LastBalance)
    OR (Balance = @LastBalance AND AccountId > @LastAccountId)
@@ -636,6 +641,9 @@ JOIN dbo.Branches AS b ON b.BranchId = a.BranchId
 GROUP BY ROLLUP (b.BranchName, a.AccountType);
 
 -- ঠিক যে combination চাও
+SELECT b.City, a.AccountType, SUM(a.Balance) AS Total
+FROM dbo.Accounts AS a
+JOIN dbo.Branches AS b ON b.BranchId = a.BranchId
 GROUP BY GROUPING SETS ( (b.City, a.AccountType), (b.City), () );`,
       viz: "rollup",
       iq: { q: "প্রতি branch-এর total আর grand total — এক result-এ?", a: "<code>GROUP BY ROLLUP(BranchName)</code>। দুর্বল উত্তর: দুটো query UNION ALL (দুইবার scan)।" }
@@ -693,9 +701,18 @@ SELECT CustomerId FROM Loans;`
       en: "Same column count; names from first query; one ORDER BY at the end; NULLs compare equal.",
       tip: { bn: "দুটো query-র ফল একই কিনা যাচাই: <code>(A EXCEPT B) UNION ALL (B EXCEPT A)</code> → ০ row হলে হুবহু এক (NULL সহ)। Refactor-এর পর এটা চালাও।", en: "EXCEPT both ways = table diff." },
       code: `-- দুই query-র ফল একই? ০ row = একই ✅
-(SELECT * FROM QueryA EXCEPT SELECT * FROM QueryB)
+-- QueryA আর QueryB: একই প্রশ্নের দুই ভিন্ন লেখা (EXISTS vs IN)
+WITH QueryA AS (SELECT c.CustomerId FROM dbo.Customers AS c
+                WHERE EXISTS (SELECT 1 FROM dbo.Accounts AS a WHERE a.CustomerId = c.CustomerId)),
+     QueryB AS (SELECT CustomerId FROM dbo.Customers
+                WHERE CustomerId IN (SELECT CustomerId FROM dbo.Accounts))
+SELECT * FROM (SELECT * FROM QueryA EXCEPT SELECT * FROM QueryB) AS d1
 UNION ALL
-(SELECT * FROM QueryB EXCEPT SELECT * FROM QueryA);`
+SELECT * FROM (SELECT * FROM QueryB EXCEPT SELECT * FROM QueryA) AS d2;
+-- বইয়ের সংক্ষিপ্ত রূপ:
+-- (SELECT * FROM QueryA EXCEPT SELECT * FROM QueryB)
+-- UNION ALL
+-- (SELECT * FROM QueryB EXCEPT SELECT * FROM QueryA);`
     }
   ],
   quiz: [

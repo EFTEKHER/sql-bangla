@@ -10,11 +10,14 @@ CHAPTERS.push(
       en: "String concatenation = injection. sp_executesql with parameters = safe.",
       viz: "injection",
       code: `-- ❌ কখনো না। @City = '''; DROP TABLE dbo.Accounts; --' → career শেষ
+DECLARE @City NVARCHAR(60) = N'Dhaka';   -- practice input (চাইলে injection string দিয়ে দেখো)
 DECLARE @sql NVARCHAR(MAX) =
     N'SELECT * FROM dbo.Customers WHERE City = ''' + @City + N'''';
 EXEC (@sql);
+GO
 
 -- ✅ sp_executesql: parameterised, cached, safe
+DECLARE @City NVARCHAR(60) = N'Dhaka', @Kyc VARCHAR(12) = 'VERIFIED';
 DECLARE @sql NVARCHAR(MAX) = N'
     SELECT c.CustomerId, c.FullName, c.City
     FROM dbo.Customers AS c
@@ -31,7 +34,8 @@ EXEC sys.sp_executesql @sql,
       t: "Identifier parameter হতে পারে না",
       bn: "Table/column-এর নাম parameter করা যায় না। লাগলে: আগে <b>whitelist</b>, তারপর <b>QUOTENAME</b>।",
       en: "Whitelist first, QUOTENAME second.",
-      code: `DECLARE @SortColumn SYSNAME = @UserInput;
+      code: `DECLARE @UserInput SYSNAME = N'Balance';   -- practice input
+DECLARE @SortColumn SYSNAME = @UserInput;
 
 IF @SortColumn NOT IN (N'Balance', N'OpenedOn', N'AccountNumber')
     THROW 50030, 'Invalid sort column.', 1;          -- আগে WHITELIST
@@ -46,14 +50,20 @@ EXEC sys.sp_executesql @sql;`,
       t: "Optional-parameter সমস্যা ('kitchen sink')",
       bn: "<code>(@X IS NULL OR Col = @X)</code> — সুবিধাজনক, কিন্তু একটা cached plan যা বাকি সব combination-এর জন্য ভুল।",
       en: "One plan for all NULL combinations is wrong for most.",
-      code: `-- সুবিধাজনক কিন্তু একটা খারাপ plan
+      code: `DECLARE @BranchId INT = 1, @Type VARCHAR(10) = NULL, @MinBal DECIMAL(19,4) = 100000;
+
+-- সুবিধাজনক কিন্তু একটা খারাপ plan
 SELECT * FROM dbo.Accounts
 WHERE (@BranchId IS NULL OR BranchId    = @BranchId)
   AND (@Type     IS NULL OR AccountType = @Type)
   AND (@MinBal   IS NULL OR Balance    >= @MinBal);
 
 -- ওষুধ ১: প্রতি call-এ নতুন plan
-... OPTION (RECOMPILE);
+SELECT * FROM dbo.Accounts
+WHERE (@BranchId IS NULL OR BranchId    = @BranchId)
+  AND (@Type     IS NULL OR AccountType = @Type)
+  AND (@MinBal   IS NULL OR Balance    >= @MinBal)
+OPTION (RECOMPILE);
 
 -- ওষুধ ২: dynamic SQL — শুধু দেওয়া predicate গুলো যোগ করো
 -- প্রতিটা আলাদা shape নিজের optimal cached plan পায়`,
@@ -172,6 +182,7 @@ JOIN dbo.Accounts  AS a ON a.CustomerId = c.CustomerId
 GROUP BY c.CustomerId, c.FullName;
 
 -- উল্টো: CSV parameter → set
+DECLARE @CsvList VARCHAR(200) = '1001000000001, 1001000000002,,1001000000003';
 SELECT TRIM(value) AS AccountNumber
 FROM STRING_SPLIT(@CsvList, ',')
 WHERE TRIM(value) <> '';
@@ -209,12 +220,14 @@ FROM dbo.Transactions AS t
 WHERE ISJSON(t.Reference) = 1;
 
 -- JSON array → rows
+DECLARE @JsonPayload NVARCHAR(MAX) = N'[{"accountId":1,"amount":500},{"accountId":2,"amount":1200}]';
 SELECT j.AccountId, j.Amount
 FROM OPENJSON(@JsonPayload)
 WITH (AccountId BIGINT        '$.accountId',
       Amount    DECIMAL(19,4) '$.amount') AS j;
 
 -- API-র জন্য সরাসরি JSON
+DECLARE @AccountId BIGINT = 1;
 SELECT a.AccountNumber, a.Balance,
        (SELECT TOP (5) t.TxnDate, t.Amount
         FROM dbo.Transactions AS t
@@ -402,7 +415,8 @@ ORDER BY u.user_updates DESC;`,
       t: "Cardinality Estimation-ই আসল খেলা",
       bn: "Optimizer-এর কাজ = প্রতিটা operator কয় row দেবে <b>অনুমান</b> করা। ঠিক হলে ঠিক join, ঠিক index, ঠিক memory। ভুল হলে সব ভুল — ভুল গুণ হয়ে উপরে ওঠে। অনুমান আসে <b>statistics</b> থেকে: ২০০ ধাপের histogram + density vector।",
       en: "Cardinality estimation drives every plan decision. Statistics = 200-step histogram + density.",
-      code: `DBCC SHOW_STATISTICS ('dbo.Transactions', 'IX_Txn_Account_Date') WITH HISTOGRAM;
+      code: `-- ℹ️ আগে Chapter 20-এর IX_Txn_Account_Date index তৈরি করো
+DBCC SHOW_STATISTICS ('dbo.Transactions', 'IX_Txn_Account_Date') WITH HISTOGRAM;
 
 -- Stats কবে update হয়েছে, কতটা পুরনো?
 SELECT s.name AS StatName, sp.last_updated, sp.rows, sp.rows_sampled,
@@ -535,7 +549,7 @@ JOIN sys.query_store_plan          AS p  ON p.query_id = q.query_id
 JOIN sys.query_store_runtime_stats AS rs ON rs.plan_id = p.plan_id
 ORDER BY rs.avg_duration DESC;
 
--- ভালো plan pin করো
+-- ভালো plan pin করো (42 / 17 = উপরের query থেকে পাওয়া নিজের id দিয়ে বদলাও)
 EXEC sys.sp_query_store_force_plan @query_id = 42, @plan_id = 17;`,
       tip: { bn: "PostgreSQL: <code>EXPLAIN (ANALYZE, BUFFERS)</code> = actual plan; pg_stat_statements = Query Store-এর মতো। MySQL: EXPLAIN ANALYZE (8.0.18+)।", en: "Postgres EXPLAIN ANALYZE." }
     }

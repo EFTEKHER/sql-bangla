@@ -5,3 +5,7 @@ SQL for Software Developers & Backend Engineers বইয়ের ২৫টা 
 Live: https://sql-bangla-eight.vercel.app
 
 Static site — কোনো build লাগে না। `index.html` খুললেই চলে।
+
+## 🛢️ SQL Server (MSSQL)-এ practice
+
+`bankdb-mssql.sql` SSMS / Azure Data Studio-তে খুলে F5 চাপো — বইয়ের BankDB database তৈরি হবে (সব table + ~১১,০০০ row data)। বিস্তারিত: সাইটের **MSSQL Practice** পেজ।

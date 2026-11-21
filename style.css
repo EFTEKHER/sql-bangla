@@ -362,3 +362,13 @@ td.hit { outline: 2px solid var(--pri); outline-offset: -2px; background: var(--
   #lang { margin-left: auto; }
 }
 @media print { #side, .top, .ch-foot, #drawer { display: none; } main { max-width: none; } }
+
+/* mssql page */
+.mstep { display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; }
+.mstep > b { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--pri); color: #fff; font-size: .85rem; }
+.mstep > div { flex: 1; min-width: 0; }
+.mstep pre.code { border-radius: 10px; margin: 8px 0; white-space: pre-wrap; word-break: break-all; }
+#ostabs { margin-bottom: 8px; }
+#scriptview { border-radius: 10px; margin-top: 10px; max-height: 70vh; }
+.codebar .cb-link { color: #94a3b8; text-decoration: none; }
+.codebar .cb-link:hover { color: #e2e8f0; text-decoration: underline; }

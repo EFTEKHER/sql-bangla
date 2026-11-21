@@ -541,6 +541,12 @@ COMMIT;`,
       bn: "🔒 <b>Pessimistic</b> (UPDLOCK) — পুরো সময় lock ধরে রাখে; ছোট server-side transaction-এ।<br>🎫 <b>Optimistic</b> (ROWVERSION) — lock নেই; লেখার সময় version মিলিয়ে দেখো। User form edit-এর মতো দীর্ঘ কাজে (EF Core-এর [Timestamp])।",
       en: "Pessimistic: hold a lock. Optimistic: check a rowversion on write.",
       code: `ALTER TABLE dbo.Accounts ADD RowVer ROWVERSION;
+GO
+
+-- practice: app যা পাঠাবে
+DECLARE @AccountId BIGINT = 1, @NewBalance DECIMAL(19,4) = 90000;
+DECLARE @OriginalRowVer BINARY(8) =
+    (SELECT RowVer FROM dbo.Accounts WHERE AccountId = @AccountId);  -- পড়ার সময়ের version
 
 UPDATE dbo.Accounts
 SET Balance = @NewBalance
@@ -555,7 +561,8 @@ IF @@ROWCOUNT = 0
       bn: "Deadlock = চক্র: A-র কাছে lock 1, চায় lock 2; B-র কাছে lock 2, চায় lock 1। Engine একজনকে victim বানিয়ে rollback করে (error <b>1205</b>)। ▶ চাপো।<br><b>৩ প্রতিরক্ষা:</b> ① সবসময় একই order-এ lock ② ছোট transaction (HTTP call-এর সময় transaction খোলা রেখো না) ③ ভালো index।",
       en: "A lock cycle; the engine kills a victim (1205). Consistent ordering, short transactions, good indexes.",
       viz: "deadlock",
-      code: `-- Deadlock transient, তাই retry করো
+      code: `-- ℹ️ আগে উপরের dbo.usp_TransferFunds procedure-টা তৈরি করো
+-- Deadlock transient, তাই retry করো
 DECLARE @Retry INT = 3;
 WHILE @Retry > 0
 BEGIN
@@ -739,7 +746,8 @@ END`,
       t: "INSTEAD OF Trigger",
       bn: "Multi-table view-কে updatable বানায় — UPDATE-এর বদলে তোমার code চলে।",
       en: "Makes a multi-table view updatable.",
-      code: `CREATE OR ALTER TRIGGER dbo.trg_vw_ActiveAccount_Update
+      code: `-- ℹ️ আগে Chapter 11-এর dbo.vw_ActiveAccountSummary view তৈরি করো
+CREATE OR ALTER TRIGGER dbo.trg_vw_ActiveAccount_Update
 ON dbo.vw_ActiveAccountSummary
 INSTEAD OF UPDATE
 AS

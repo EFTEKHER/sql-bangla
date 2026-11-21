@@ -26,7 +26,7 @@ function hl(code) {
 // ─── Sidebar ───
 function sidebar() {
   const nav = $('#nav');
-  nav.innerHTML = `<a href="#/" class="nav-home">🏠 হোম</a><a href="#/plan" class="nav-home">⏱ ৩-ঘণ্টার প্ল্যান</a><a href="#/play" class="nav-home">🧪 SQL Playground</a><a href="#/cards" class="nav-home">🃏 Flashcards</a><a href="#/cheat" class="nav-home">📋 Cheat Sheet</a>` +
+  nav.innerHTML = `<a href="#/" class="nav-home">🏠 হোম</a><a href="#/plan" class="nav-home">⏱ ৩-ঘণ্টার প্ল্যান</a><a href="#/play" class="nav-home">🧪 SQL Playground</a><a href="#/mssql" class="nav-home">🛢️ MSSQL Practice</a><a href="#/cards" class="nav-home">🃏 Flashcards</a><a href="#/cheat" class="nav-home">📋 Cheat Sheet</a>` +
     PARTS.map(p => `<div class="nav-part">${p.icon} ${p.bn} <small>${p.en}</small></div>` + CHAPTERS.filter(c => c.part === p.id).map(c => `<a href="#/ch/${c.id}" data-ch="${c.id}" class="${done.has(c.id) ? 'done' : ''}"><span class="num">${c.id}</span><span class="nt">${c.bn}</span><span class="mins">${BN(MIN[c.id])}m</span></a>`).join('')).join('');
   updateProgress();
 }
@@ -70,7 +70,7 @@ function section(s, i) {
     <div class="bn">${s.bn}</div>${s.en ? `<div class="en">🇬🇧 ${s.en}</div>` : ''}
     ${s.mem ? `<div class="mem"><b>🧠 মনে রাখো</b><div>${s.mem}</div></div>` : ''}
     ${s.viz ? `<div class="viz" id="viz-${i}"></div>` : ''}
-    ${s.code ? `<div class="codebox" data-raw="${esc(s.code).replace(/"/g, '&quot;')}"><div class="codebar"><span>SQL Server (T-SQL)</span><span><button class="btn xs copy">📋 কপি</button>${s.run ? `<button class="btn xs pri runit" data-i="${i}">▶ চালাও</button>` : ''}</span></div><pre class="code">${hl(s.code)}</pre></div>` : (s.run ? `<button class="btn sm pri runit" data-i="${i}">▶ Playground-এ চালাও</button>` : '')}
+    ${s.code ? `<div class="codebox" data-raw="${esc(s.code).replace(/"/g, '&quot;')}"><div class="codebar"><a class="cb-link" href="#/mssql" title="SSMS-এ practice করার setup">🛢️ SQL Server (T-SQL) · SSMS-এ চালাও</a><span><button class="btn xs copy">📋 কপি</button>${s.run ? `<button class="btn xs pri runit" data-i="${i}">▶ চালাও</button>` : ''}</span></div><pre class="code">${hl(s.code)}</pre></div>` : (s.run ? `<button class="btn sm pri runit" data-i="${i}">▶ Playground-এ চালাও</button>` : '')}
     ${s.trap ? `<div class="box trap"><b>⚠️ ফাঁদ (Trap)</b><div>${s.trap.bn}</div><div class="en">${s.trap.en}</div></div>` : ''}
     ${s.tip ? `<div class="box tip"><b>💡 টিপস</b><div>${s.tip.bn}</div><div class="en">${s.tip.en}</div></div>` : ''}
     ${s.iq ? `<details class="box iq"><summary><b>🎤 ইন্টারভিউ প্রশ্ন:</b> ${s.iq.q} <span class="muted">(উত্তর দেখতে ক্লিক)</span></summary><div>${s.iq.a}</div></details>` : ''}
@@ -99,7 +99,7 @@ function home() {
   $('#main').innerHTML = `<section class="hero"><div class="hero-tag">📘 SQL for Software Developers & Backend Engineers · ৮৫ পৃষ্ঠা → ২৫ অধ্যায়</div>
     <h1>SQL শেখো <span class="grad">সহজ বাংলায়</span>,<br>ইন্টারঅ্যাক্টিভভাবে — <span class="grad">৩ ঘণ্টায়</span></h1>
     <p>প্রতিটা টপিক: ছোট বাংলা ব্যাখ্যা + English লাইন + 🧠 মনে রাখার কৌশল + 🎮 ভিজুয়ালাইজেশন + ▶ ব্রাউজারেই আসল SQL চালাও + 🧩 কুইজ।</p>
-    <div class="hero-btns"><a class="btn pri lg" href="#/plan">⏱ ৩-ঘণ্টার প্ল্যান শুরু করো</a><a class="btn lg" href="#/ch/${nextCh.id}">${done.size ? '▶ চালিয়ে যাও: ' + nextCh.bn : '📖 অধ্যায় ১ থেকে শুরু'}</a></div></section>
+    <div class="hero-btns"><a class="btn pri lg" href="#/plan">⏱ ৩-ঘণ্টার প্ল্যান শুরু করো</a><a class="btn lg" href="#/mssql">🛢️ MSSQL-এ practice setup</a><a class="btn lg" href="#/ch/${nextCh.id}">${done.size ? '▶ চালিয়ে যাও: ' + nextCh.bn : '📖 অধ্যায় ১ থেকে শুরু'}</a></div></section>
     <section class="card"><h2>🧠 সবচেয়ে গুরুত্বপূর্ণ একটা জিনিস</h2><div class="bn">SQL তুমি যে order-এ লেখো, ডাটাবেস সেভাবে চালায় না। এটা মুখস্থ করলে অর্ধেক নিয়ম নিজেই বোঝা যায়:</div>
       <div class="order-strip">${['FROM', 'WHERE', 'GROUP BY', 'HAVING', 'SELECT', 'DISTINCT', 'ORDER BY', 'LIMIT'].map((x, i) => `<span><b>${BN(i + 1)}</b>${x}</span>`).join('')}</div>
       <div class="mem"><b>🧠 Mnemonic</b><div><b>F</b>resh <b>W</b>ater <b>G</b>ives <b>H</b>ealthy <b>S</b>kin, <b>D</b>rink <b>O</b>nly <b>L</b>emon</div></div></section>
@@ -289,6 +289,80 @@ function playPage() {
   $$('.tries [data-q]').forEach(b => b.onclick = () => { $('#pgfull .pg-in').value = b.dataset.q; $('#pgfull #pgrun').click(); });
 }
 
+// ─── MSSQL practice page ───
+function mssqlPage() {
+  const steps = (items) => items.map((x, i) => `<div class="mstep"><b>${BN(i + 1)}</b><div>${x}</div></div>`).join('');
+  const docker = 'docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Practice!Pass123" -p 1433:1433 --name mssql -d mcr.microsoft.com/mssql/server:2022-latest';
+  $('#main').innerHTML = `<section class="hero sm"><h1>🛢️ SQL Server (MSSQL)-এ practice</h1>
+    <p>বইয়ের সব code SQL Server-এর (T-SQL)। একটা script চালালেই বইয়ের <b>BankDB</b> database তৈরি হবে — সব table, constraint আর ১১,০০০+ row data সহ। তারপর যেকোনো অধ্যায়ের code কপি করে SSMS-এ চালাও।</p>
+    <div class="hero-btns"><a class="btn pri lg" href="bankdb-mssql.sql" download>⬇️ bankdb-mssql.sql ডাউনলোড</a><button class="btn lg" id="copyscript">📋 পুরো script কপি</button></div></section>
+
+    <section class="card"><h2>① SQL Server install (একবারই)</h2>
+      <div class="seg" id="ostabs"><button class="on" data-os="win">🪟 Windows</button><button data-os="mac">🍎 Mac / 🐧 Linux</button></div>
+      <div id="osbody"></div></section>
+
+    <section class="card"><h2>② BankDB তৈরি করো</h2>${steps([
+      'উপরের বাটন থেকে <code>bankdb-mssql.sql</code> ডাউনলোড করো।',
+      'SSMS-এ <b>File → Open → File…</b> দিয়ে খোলো (বা Azure Data Studio / VS Code-এ)।',
+      '<b>Execute</b> চাপো (<code>F5</code>)। ১০–২০ সেকেন্ড লাগবে।',
+      'শেষে নিচের মতো row count দেখাবে — তাহলে সব ঠিক ✅'])}
+      ${tbl(['Table', 'Rows', 'কী আছে'], [
+        ['Branches', '6', 'Dhaka, Chattogram, Cumilla-র শাখা'],
+        ['Employees', '12', 'CEO থেকে Teller — ৪ level hierarchy'],
+        ['Customers', '200', 'কিছুর Email/Phone NULL; KYC: VERIFIED / PENDING / REJECTED'],
+        ['Accounts', '267', 'SAVINGS / CURRENT / FD; কিছু DORMANT ও CLOSED'],
+        ['Transactions', '10,809', 'জানুয়ারি ২০২৫ – অক্টোবর ২০২৬; ATM / ONLINE / BRANCH / POS'],
+        ['Loans', '32', 'ACTIVE / CLOSED / DEFAULTED'],
+        ['CustomerStaging', '3', 'Chapter 12-এর MERGE-এর জন্য'],
+        ['ArchivedTransactions · AccountAudit · ErrorLog', '0', 'Chapter 12, 15, 18-এর উদাহরণ এখানে লিখবে']])}
+      <div class="box tip"><b>💡 আবার শুরু থেকে?</b><div>যতবার খুশি একই script আবার চালাও — BankDB মুছে একদম নতুন করে বানায়। তাই DELETE / UPDATE / DROP নির্ভয়ে practice করো।</div></div>
+      <div class="box trap"><b>⚠️ সতর্কতা</b><div>Script-টা <code>BankDB</code> নামের database <b>মুছে</b> ফেলে। ওই নামে তোমার নিজের কোনো দরকারি database থাকলে আগে নাম বদলাও।</div></div></section>
+
+    <section class="card"><h2>③ এবার practice করো</h2>${steps([
+      'যেকোনো অধ্যায় খোলো → code block-এর <b>📋 কপি</b> চাপো।',
+      'SSMS-এ <b>New Query</b> → উপরে database dropdown-এ <code>BankDB</code> বাছো (বা প্রথম লাইনে <code>USE BankDB;</code>) → paste → <code>F5</code>।',
+      'Performance অধ্যায়ে (২০–২৩) <code>Ctrl+M</code> চেপে <b>Actual Execution Plan</b> চালু করো, আর <code>SET STATISTICS IO, TIME ON;</code> দিয়ে logical reads দেখো।',
+      'কিছু উদাহরণে <code>ℹ️</code> লেখা থাকে — যেমন "আগে procedure / view / index তৈরি করো"। সেটা আগে চালাও।'])}</section>
+
+    <section class="card"><h2>🎯 কোন data কোন অধ্যায়ের জন্য</h2><div class="bn">Data-তে ইচ্ছা করে কিছু "ফাঁদ" রাখা আছে, যাতে বইয়ের প্রতিটা উদাহরণ আসল ফল দেখায়:</div>
+      ${tbl(['অধ্যায়', 'Data-তে যা আছে', 'চেষ্টা করো'], [
+        ['3 · NULL', 'অনেক customer-এর Email / Phone NULL', '<code>WHERE Email = NULL</code> vs <code>IS NULL</code>'],
+        ['4 · Date', '২০২৬-০১-৩১ রাত ২৩:৫৯-এর transaction', '<code>BETWEEN</code> vs <code>&gt;= … &lt;</code> — row সংখ্যা মেলাও'],
+        ['5 · JOIN', 'Nusrat Jahan (Id 3)-এর কোনো account নেই; আরও কয়েকজনের account নেই', 'LEFT JOIN, anti-join, WHERE-এর ফাঁদ'],
+        ['5 · Fan-out', 'Rahim (Id 1): ২টা account × ৩টা loan', 'SUM দ্বিগুণ/তিনগুণ হওয়ার bug'],
+        ['8 · NOT EXISTS', 'Kandirpar (CMB01) শাখায় কোনো employee নেই', 'Employee নেই এমন branch খোঁজো'],
+        ['9 · Recursive CTE', 'CEO → CTO → Dev Lead → Developer', 'পুরো org chart'],
+        ['10 · Gaps & islands', 'Account 1: ২০২৬-০১-০১ থেকে টানা ৫ দিন', 'Streak খোঁজো'],
+        ['12 · MERGE', 'CustomerStaging: ১টা update, ১টা অপরিবর্তিত, ১টা নতুন', 'MERGE-এর OUTPUT $action দেখো'],
+        ['16 · Batch loop', 'কিছু transaction-এর Channel = <code>WEB</code>', 'WEB → ONLINE backfill loop'],
+        ['19 · JSON', 'POS transaction-এর Reference-এ JSON', "<code>JSON_VALUE(Reference, '$.merchant')</code>"],
+        ['20–22 · Index', '১০,৮০৯টা transaction — index ছাড়া scan', 'Index-এর আগে/পরে execution plan ও logical reads তুলনা'],
+        ['24 · Denormalization', 'Accounts.Balance = শেষ transaction-এর BalanceAfter', 'Reconciliation query লিখে মিলিয়ে দেখো'],
+        ['25 · Velocity', 'Account 3: ২০২৬-০১-২০-এ ২৪ ঘণ্টায় ৫টা debit', 'Exercise 3 চালাও']])}</section>
+
+    <section class="card"><h2>📜 Script দেখো</h2><details><summary class="muted" style="cursor:pointer">পুরো script দেখতে ক্লিক করো</summary><pre class="code" id="scriptview">লোড হচ্ছে…</pre></details></section>`;
+
+  const os = {
+    win: steps([
+      '<b>SQL Server 2022 Developer</b> (ফ্রি) ডাউনলোড: <a href="https://www.microsoft.com/en-us/sql-server/sql-server-downloads" target="_blank" rel="noopener">microsoft.com/sql-server/sql-server-downloads</a> → <b>Developer</b> → install-এ <b>Basic</b> বাছো। (Express-ও চলবে।)',
+      '<b>SSMS</b> (SQL Server Management Studio) ডাউনলোড ও install: <a href="https://aka.ms/ssmsfullsetup" target="_blank" rel="noopener">aka.ms/ssmsfullsetup</a>',
+      'SSMS খোলো → Server name: <code>localhost</code> (Express হলে <code>localhost\\SQLEXPRESS</code>) → Authentication: <b>Windows Authentication</b> → <b>Trust server certificate</b> ✔ → Connect।']),
+    mac: steps([
+      '<b>Docker Desktop</b> install করো: <a href="https://www.docker.com/products/docker-desktop/" target="_blank" rel="noopener">docker.com</a> (Apple Silicon Mac-এ Settings → "Use Rosetta for x86/amd64 emulation" চালু করো)।',
+      `Terminal-এ এই command চালাও (SQL Server 2022 container):<pre class="code">${esc(docker)}</pre>`,
+      'Query লেখার জন্য <b>VS Code</b> + <b>"SQL Server (mssql)"</b> extension (বা Azure Data Studio) install করো।',
+      'Connect: Server <code>localhost,1433</code> · User <code>sa</code> · Password <code>Practice!Pass123</code> · <b>Trust server certificate</b> ✔']),
+  };
+  const drawOs = k => { $('#osbody').innerHTML = os[k]; $$('#ostabs button').forEach(b => b.classList.toggle('on', b.dataset.os === k)); };
+  $$('#ostabs button').forEach(b => b.onclick = () => drawOs(b.dataset.os));
+  drawOs(/Mac|Linux/.test(navigator.platform) ? 'mac' : 'win');
+
+  let scriptText = null;
+  const getScript = () => scriptText ? Promise.resolve(scriptText) : fetch('bankdb-mssql.sql').then(r => r.text()).then(t => (scriptText = t));
+  getScript().then(t => { const v = $('#scriptview'); if (v) v.innerHTML = hl(t); }, () => { const v = $('#scriptview'); if (v) v.textContent = 'Script লোড হয়নি — উপরের ডাউনলোড বাটন ব্যবহার করো।'; });
+  $('#copyscript').onclick = () => getScript().then(t => navigator.clipboard.writeText(t)).then(() => { $('#copyscript').textContent = '✓ কপি হয়েছে — SSMS-এ paste করে F5'; }, () => { $('#copyscript').textContent = 'কপি হয়নি — ডাউনলোড বাটন ব্যবহার করো'; });
+}
+
 // ─── Search ───
 function search(q) {
   const box = $('#search-res'); q = q.trim().toLowerCase();
@@ -307,7 +381,7 @@ function route() {
   $('#search-res').hidden = true;
   const m = h.match(/^\/ch\/(\d+)(?:\/(\d+))?/);
   if (m) { renderChapter(+m[1]); if (m[2]) setTimeout(() => $('#sec-' + m[2])?.scrollIntoView({ block: 'start' }), 50); }
-  else if (h === '/plan') plan(); else if (h === '/cards') cards(); else if (h === '/cheat') cheat(); else if (h === '/play') playPage(); else home();
+  else if (h === '/plan') plan(); else if (h === '/cards') cards(); else if (h === '/cheat') cheat(); else if (h === '/play') playPage(); else if (h === '/mssql') mssqlPage(); else home();
   if (!m) window.scrollTo(0, 0);
   timerTick();
 }
