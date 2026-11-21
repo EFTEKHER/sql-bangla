@@ -19,7 +19,8 @@
    ===================================================================== */
 
 -- ─────────────────────────────────────────────────────────────────────
--- 0. Database তৈরি (আগে থাকলে মুছে নতুন করে)
+-- ▶ STEP 0: Database তৈরি
+-- আগে থাকলে মুছে নতুন করে বানায় (practice reset)।
 -- ─────────────────────────────────────────────────────────────────────
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;   -- indexed view / filtered index-এর জন্য দরকার
@@ -43,8 +44,13 @@ SET NOCOUNT ON;
 GO
 
 -- ─────────────────────────────────────────────────────────────────────
--- 1. Tables (বইয়ের Listing 2.1 – 2.3, হুবহু)
+-- ▶ STEP 1: Branches (শাখা)
+-- ৬টা শাখা। SYL01 / KHL01 / RAJ01 ইচ্ছা করে বাদ — Chapter 12-এর INSERT
+-- উদাহরণে তুমি নিজে যোগ করবে। Kandirpar (CMB01)-এ কোনো employee নেই।
 -- ─────────────────────────────────────────────────────────────────────
+USE BankDB;
+GO
+
 CREATE TABLE dbo.Branches (
     BranchId    INT           NOT NULL IDENTITY(1,1),
     BranchCode  CHAR(5)       NOT NULL,
@@ -54,6 +60,24 @@ CREATE TABLE dbo.Branches (
     CONSTRAINT PK_Branches PRIMARY KEY CLUSTERED (BranchId),
     CONSTRAINT UQ_Branches_Code UNIQUE (BranchCode)
 );
+GO
+
+INSERT INTO dbo.Branches (BranchCode, BranchName, City, OpenedOn)
+VALUES ('DHK01', N'Gulshan Corporate', N'Dhaka',      '2005-03-01'),   -- 1
+       ('DHK02', N'Motijheel Main',    N'Dhaka',      '1998-07-15'),   -- 2
+       ('CTG01', N'Agrabad',           N'Chattogram', '2001-01-10'),   -- 3
+       ('DHK03', N'Uttara',            N'Dhaka',      '2012-09-01'),   -- 4
+       ('CTG02', N'Nasirabad',         N'Chattogram', '2015-04-20'),   -- 5
+       ('CMB01', N'Kandirpar',         N'Cumilla',    '2019-11-05');   -- 6
+GO
+
+-- ─────────────────────────────────────────────────────────────────────
+-- ▶ STEP 2: Employees (কর্মী)
+-- ১২ জন, ৪ level-এর hierarchy। CEO-র ManagerId = NULL।
+-- ManagerId → নিজের table-এর EmployeeId (self-reference)।
+-- ─────────────────────────────────────────────────────────────────────
+USE BankDB;
+GO
 
 CREATE TABLE dbo.Employees (
     EmployeeId  INT           NOT NULL IDENTITY(1,1),
@@ -70,138 +94,8 @@ CREATE TABLE dbo.Employees (
         REFERENCES dbo.Employees(EmployeeId),
     CONSTRAINT CK_Emp_Salary CHECK (Salary > 0)
 );
-
-CREATE TABLE dbo.Customers (
-    CustomerId  INT           NOT NULL IDENTITY(1,1),
-    NationalId  VARCHAR(20)   NOT NULL,
-    FullName    NVARCHAR(120) NOT NULL,
-    Email       NVARCHAR(160) NULL,
-    Phone       VARCHAR(20)   NULL,
-    City        NVARCHAR(60)  NULL,
-    KycStatus   VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
-    CreatedAt   DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT PK_Customers PRIMARY KEY CLUSTERED (CustomerId),
-    CONSTRAINT UQ_Customers_Nid UNIQUE (NationalId),
-    CONSTRAINT CK_Customers_Kyc CHECK
-        (KycStatus IN ('PENDING','VERIFIED','REJECTED'))
-);
-
-CREATE TABLE dbo.Accounts (
-    AccountId     BIGINT        NOT NULL IDENTITY(1,1),
-    AccountNumber CHAR(13)      NOT NULL,
-    CustomerId    INT           NOT NULL,
-    BranchId      INT           NOT NULL,
-    AccountType   VARCHAR(10)   NOT NULL,          -- SAVINGS, CURRENT, FD
-    Balance       DECIMAL(19,4) NOT NULL DEFAULT 0,
-    Currency      CHAR(3)       NOT NULL DEFAULT 'BDT',
-    Status        VARCHAR(10)   NOT NULL DEFAULT 'ACTIVE',
-    OpenedOn      DATE          NOT NULL,
-    ClosedOn      DATE          NULL,
-    CONSTRAINT PK_Accounts PRIMARY KEY CLUSTERED (AccountId),
-    CONSTRAINT UQ_Accounts_Number UNIQUE (AccountNumber),
-    CONSTRAINT FK_Acc_Customer FOREIGN KEY (CustomerId)
-        REFERENCES dbo.Customers(CustomerId),
-    CONSTRAINT FK_Acc_Branch FOREIGN KEY (BranchId)
-        REFERENCES dbo.Branches(BranchId),
-    CONSTRAINT CK_Acc_Type   CHECK (AccountType IN ('SAVINGS','CURRENT','FD')),
-    CONSTRAINT CK_Acc_Status CHECK (Status IN ('ACTIVE','DORMANT','CLOSED')),
-    CONSTRAINT CK_Acc_Closed CHECK (ClosedOn IS NULL OR ClosedOn >= OpenedOn)
-);
-
-CREATE TABLE dbo.Transactions (
-    TxnId        BIGINT        NOT NULL IDENTITY(1,1),
-    AccountId    BIGINT        NOT NULL,
-    TxnDate      DATETIME2(3)  NOT NULL,
-    TxnType      VARCHAR(10)   NOT NULL,           -- DEBIT / CREDIT
-    Channel      VARCHAR(12)   NOT NULL,           -- ATM, ONLINE, BRANCH, POS
-    Amount       DECIMAL(19,4) NOT NULL,
-    BalanceAfter DECIMAL(19,4) NOT NULL,
-    Reference    NVARCHAR(80)  NULL,
-    CONSTRAINT PK_Transactions PRIMARY KEY CLUSTERED (TxnId),
-    CONSTRAINT FK_Txn_Account FOREIGN KEY (AccountId)
-        REFERENCES dbo.Accounts(AccountId),
-    CONSTRAINT CK_Txn_Type   CHECK (TxnType IN ('DEBIT','CREDIT')),
-    CONSTRAINT CK_Txn_Amount CHECK (Amount > 0)
-);
-
-CREATE TABLE dbo.Loans (
-    LoanId       INT           NOT NULL IDENTITY(1,1),
-    CustomerId   INT           NOT NULL,
-    BranchId     INT           NOT NULL,
-    Principal    DECIMAL(19,4) NOT NULL,
-    InterestRate DECIMAL(5,2)  NOT NULL,
-    TermMonths   INT           NOT NULL,
-    DisbursedOn  DATE          NOT NULL,
-    Status       VARCHAR(12)   NOT NULL,           -- ACTIVE, CLOSED, DEFAULTED
-    CONSTRAINT PK_Loans PRIMARY KEY CLUSTERED (LoanId),
-    CONSTRAINT FK_Loan_Customer FOREIGN KEY (CustomerId)
-        REFERENCES dbo.Customers(CustomerId),
-    CONSTRAINT FK_Loan_Branch FOREIGN KEY (BranchId)
-        REFERENCES dbo.Branches(BranchId)
-);
 GO
 
--- ─────────────────────────────────────────────────────────────────────
--- 2. Support tables (বইয়ের উদাহরণ চালাতে লাগে)
--- ─────────────────────────────────────────────────────────────────────
--- Chapter 12: INSERT ... SELECT archive উদাহরণ
-CREATE TABLE dbo.ArchivedTransactions (
-    TxnId     BIGINT        NOT NULL PRIMARY KEY,
-    AccountId BIGINT        NOT NULL,
-    TxnDate   DATETIME2(3)  NOT NULL,
-    Amount    DECIMAL(19,4) NOT NULL
-);
-
--- Chapter 12: MERGE উদাহরণের source
-CREATE TABLE dbo.CustomerStaging (
-    NationalId VARCHAR(20)   NOT NULL,
-    FullName   NVARCHAR(120) NOT NULL,
-    Email      NVARCHAR(160) NULL,
-    City       NVARCHAR(60)  NULL
-);
-
--- Chapter 15: audit trigger এখানে লেখে
-CREATE TABLE dbo.AccountAudit (
-    AuditId    BIGINT        NOT NULL IDENTITY(1,1) PRIMARY KEY,
-    AccountId  BIGINT        NOT NULL,
-    OldBalance DECIMAL(19,4) NULL,
-    NewBalance DECIMAL(19,4) NULL,
-    OldStatus  VARCHAR(10)   NULL,
-    NewStatus  VARCHAR(10)   NULL,
-    ChangedBy  NVARCHAR(128) NOT NULL,
-    ChangedAt  DATETIME2(3)  NOT NULL
-);
-
--- Chapter 18: CATCH block এখানে error log করে
-CREATE TABLE dbo.ErrorLog (
-    ErrorLogId     INT            NOT NULL IDENTITY(1,1) PRIMARY KEY,
-    ErrorNumber    INT            NULL,
-    ErrorMessage   NVARCHAR(4000) NULL,
-    ErrorProcedure NVARCHAR(128)  NULL,
-    ErrorLine      INT            NULL,
-    LoggedAt       DATETIME2(3)   NOT NULL
-);
-GO
-
--- ─────────────────────────────────────────────────────────────────────
--- 3. Branches — ৬টা শাখা
---    (SYL01 / KHL01 / RAJ01 ইচ্ছা করে বাদ — Chapter 12-এর INSERT
---     উদাহরণে তুমি নিজে এগুলো যোগ করবে)
---    Kandirpar (CMB01)-এ কোনো employee নেই → NOT EXISTS অনুশীলনের জন্য
--- ─────────────────────────────────────────────────────────────────────
-INSERT INTO dbo.Branches (BranchCode, BranchName, City, OpenedOn)
-VALUES ('DHK01', N'Gulshan Corporate', N'Dhaka',      '2005-03-01'),   -- 1
-       ('DHK02', N'Motijheel Main',    N'Dhaka',      '1998-07-15'),   -- 2
-       ('CTG01', N'Agrabad',           N'Chattogram', '2001-01-10'),   -- 3
-       ('DHK03', N'Uttara',            N'Dhaka',      '2012-09-01'),   -- 4
-       ('CTG02', N'Nasirabad',         N'Chattogram', '2015-04-20'),   -- 5
-       ('CMB01', N'Kandirpar',         N'Cumilla',    '2019-11-05');   -- 6
-GO
-
--- ─────────────────────────────────────────────────────────────────────
--- 4. Employees — ১২ জন, ৪ level-এর hierarchy (Chapter 5 self join,
---    Chapter 9 recursive CTE)। CEO-র ManagerId = NULL।
--- ─────────────────────────────────────────────────────────────────────
 INSERT INTO dbo.Employees (BranchId, ManagerId, FullName, Designation, Salary, HiredOn)
 VALUES (1, NULL, N'Ayesha Siddiqua', N'CEO',            450000, '2005-03-01'),  -- 1
        (1, 1,    N'Bashir Ahmed',    N'CTO',            320000, '2010-06-01'),  -- 2
@@ -218,11 +112,29 @@ VALUES (1, NULL, N'Ayesha Siddiqua', N'CEO',            450000, '2005-03-01'),  
 GO
 
 -- ─────────────────────────────────────────────────────────────────────
--- 5. Customers — প্রথম ১২ জন হাতে লেখা (বইয়ের Rahim, Karim, Nusrat সহ),
---    বাকি ১৮৮ জন নিচে generate করা।
---    Nusrat (Id 3)-এর কোনো account নেই → anti-join অনুশীলনের জন্য।
---    কয়েকজনের Email / Phone NULL → NULL অধ্যায়ের জন্য।
+-- ▶ STEP 3: Customers (গ্রাহক)
+-- প্রথম ১২ জন হাতে লেখা, বাকি ১৮৮ জন INSERT ... SELECT দিয়ে generate করা।
+-- Nusrat (Id 3)-এর কোনো account থাকবে না। কয়েকজনের Email / Phone NULL।
 -- ─────────────────────────────────────────────────────────────────────
+USE BankDB;
+GO
+
+CREATE TABLE dbo.Customers (
+    CustomerId  INT           NOT NULL IDENTITY(1,1),
+    NationalId  VARCHAR(20)   NOT NULL,
+    FullName    NVARCHAR(120) NOT NULL,
+    Email       NVARCHAR(160) NULL,
+    Phone       VARCHAR(20)   NULL,
+    City        NVARCHAR(60)  NULL,
+    KycStatus   VARCHAR(12)   NOT NULL DEFAULT 'PENDING',
+    CreatedAt   DATETIME2(3)  NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT PK_Customers PRIMARY KEY CLUSTERED (CustomerId),
+    CONSTRAINT UQ_Customers_Nid UNIQUE (NationalId),
+    CONSTRAINT CK_Customers_Kyc CHECK
+        (KycStatus IN ('PENDING','VERIFIED','REJECTED'))
+);
+GO
+
 INSERT INTO dbo.Customers (NationalId, FullName, Email, Phone, City, KycStatus, CreatedAt)
 VALUES ('1990123456', N'Rahim Uddin',     N'rahim@example.com',  '01711000001', N'Dhaka',      'VERIFIED', '2019-01-10'),  -- 1
        ('1985987654', N'Karim Hossain',   N'karim@example.com',  NULL,          N'Dhaka',      'VERIFIED', '2019-05-02'),  -- 2
@@ -260,10 +172,36 @@ FROM N;
 GO
 
 -- ─────────────────────────────────────────────────────────────────────
--- 6. Accounts — প্রথম ১৩টা হাতে লেখা, বাকিগুলো generate করা।
---    Balance এখানে "opening balance"; transaction যোগ হওয়ার পর
---    নিচে (ধাপ ৯) আসল balance হিসাব করে update হবে।
+-- ▶ STEP 4: Accounts (অ্যাকাউন্ট)
+-- প্রথম ১৩টা হাতে লেখা, বাকিগুলো generate করা।
+-- Balance এখানে "opening balance" — STEP 8-এ আসল balance হিসাব হবে।
 -- ─────────────────────────────────────────────────────────────────────
+USE BankDB;
+GO
+
+CREATE TABLE dbo.Accounts (
+    AccountId     BIGINT        NOT NULL IDENTITY(1,1),
+    AccountNumber CHAR(13)      NOT NULL,
+    CustomerId    INT           NOT NULL,
+    BranchId      INT           NOT NULL,
+    AccountType   VARCHAR(10)   NOT NULL,          -- SAVINGS, CURRENT, FD
+    Balance       DECIMAL(19,4) NOT NULL DEFAULT 0,
+    Currency      CHAR(3)       NOT NULL DEFAULT 'BDT',
+    Status        VARCHAR(10)   NOT NULL DEFAULT 'ACTIVE',
+    OpenedOn      DATE          NOT NULL,
+    ClosedOn      DATE          NULL,
+    CONSTRAINT PK_Accounts PRIMARY KEY CLUSTERED (AccountId),
+    CONSTRAINT UQ_Accounts_Number UNIQUE (AccountNumber),
+    CONSTRAINT FK_Acc_Customer FOREIGN KEY (CustomerId)
+        REFERENCES dbo.Customers(CustomerId),
+    CONSTRAINT FK_Acc_Branch FOREIGN KEY (BranchId)
+        REFERENCES dbo.Branches(BranchId),
+    CONSTRAINT CK_Acc_Type   CHECK (AccountType IN ('SAVINGS','CURRENT','FD')),
+    CONSTRAINT CK_Acc_Status CHECK (Status IN ('ACTIVE','DORMANT','CLOSED')),
+    CONSTRAINT CK_Acc_Closed CHECK (ClosedOn IS NULL OR ClosedOn >= OpenedOn)
+);
+GO
+
 INSERT INTO dbo.Accounts (AccountNumber, CustomerId, BranchId, AccountType, Balance, Status, OpenedOn, ClosedOn)
 VALUES ('1001000000001',  1, 1, 'SAVINGS',   85000.00, 'ACTIVE',  '2020-02-01', NULL),          -- 1
        ('1001000000002',  1, 1, 'CURRENT',  250000.00, 'ACTIVE',  '2021-06-11', NULL),          -- 2
@@ -305,16 +243,30 @@ FROM src;
 GO
 
 -- ─────────────────────────────────────────────────────────────────────
--- 7. Transactions
---    (ক) হাতে লেখা কিছু বিশেষ row:
---        • Account 3: ২০২৬-০১-২০ তারিখে ২৪ ঘণ্টায় ৫টা debit
---          → Chapter 25 velocity check
---        • Account 1: ২০২৬-০১-০১ থেকে টানা ৫ দিন activity
---          → Chapter 10 gaps & islands
---        • ৩১ জানুয়ারির মধ্যরাতের পরের row → Chapter 4 BETWEEN ফাঁদ
---    (খ) বাকি ~১১,০০০ row generate করা (২০২৫-০১-০১ থেকে ২০২৬-১০-৩১)
---    BalanceAfter আপাতত 0; ধাপ ৯-এ running total দিয়ে ঠিক করা হবে।
+-- ▶ STEP 5: Transactions (লেনদেন)
+-- কিছু বিশেষ row হাতে লেখা + ~১০,৮০০ row generate করা।
+-- BalanceAfter আপাতত 0; STEP 8-এ running total দিয়ে ঠিক হবে।
 -- ─────────────────────────────────────────────────────────────────────
+USE BankDB;
+GO
+
+CREATE TABLE dbo.Transactions (
+    TxnId        BIGINT        NOT NULL IDENTITY(1,1),
+    AccountId    BIGINT        NOT NULL,
+    TxnDate      DATETIME2(3)  NOT NULL,
+    TxnType      VARCHAR(10)   NOT NULL,           -- DEBIT / CREDIT
+    Channel      VARCHAR(12)   NOT NULL,           -- ATM, ONLINE, BRANCH, POS
+    Amount       DECIMAL(19,4) NOT NULL,
+    BalanceAfter DECIMAL(19,4) NOT NULL,
+    Reference    NVARCHAR(80)  NULL,
+    CONSTRAINT PK_Transactions PRIMARY KEY CLUSTERED (TxnId),
+    CONSTRAINT FK_Txn_Account FOREIGN KEY (AccountId)
+        REFERENCES dbo.Accounts(AccountId),
+    CONSTRAINT CK_Txn_Type   CHECK (TxnType IN ('DEBIT','CREDIT')),
+    CONSTRAINT CK_Txn_Amount CHECK (Amount > 0)
+);
+GO
+
 INSERT INTO dbo.Transactions (AccountId, TxnDate, TxnType, Channel, Amount, BalanceAfter, Reference)
 VALUES (3, '2026-01-20 10:00:00', 'DEBIT',  'ATM',    500, 0, NULL),
        (3, '2026-01-20 11:00:00', 'DEBIT',  'ATM',    500, 0, NULL),
@@ -362,9 +314,30 @@ WHERE a.Status = 'ACTIVE'          -- DORMANT/CLOSED account-এ নতুন tr
 GO
 
 -- ─────────────────────────────────────────────────────────────────────
--- 8. Loans — কিছু হাতে লেখা + প্রতি ৭ম customer-এর একটা
---    Customer 1-এর ২টা account × ৩টা loan → Chapter 5 fan-out bug
+-- ▶ STEP 6: Loans (ঋণ)
+-- কিছু হাতে লেখা + প্রতি ৭ম customer-এর একটা।
+-- Customer 1-এর ২টা account × ৩টা loan → Chapter 5 fan-out bug।
 -- ─────────────────────────────────────────────────────────────────────
+USE BankDB;
+GO
+
+CREATE TABLE dbo.Loans (
+    LoanId       INT           NOT NULL IDENTITY(1,1),
+    CustomerId   INT           NOT NULL,
+    BranchId     INT           NOT NULL,
+    Principal    DECIMAL(19,4) NOT NULL,
+    InterestRate DECIMAL(5,2)  NOT NULL,
+    TermMonths   INT           NOT NULL,
+    DisbursedOn  DATE          NOT NULL,
+    Status       VARCHAR(12)   NOT NULL,           -- ACTIVE, CLOSED, DEFAULTED
+    CONSTRAINT PK_Loans PRIMARY KEY CLUSTERED (LoanId),
+    CONSTRAINT FK_Loan_Customer FOREIGN KEY (CustomerId)
+        REFERENCES dbo.Customers(CustomerId),
+    CONSTRAINT FK_Loan_Branch FOREIGN KEY (BranchId)
+        REFERENCES dbo.Branches(BranchId)
+);
+GO
+
 INSERT INTO dbo.Loans (CustomerId, BranchId, Principal, InterestRate, TermMonths, DisbursedOn, Status)
 VALUES (1, 1, 500000,  9.50, 36, '2024-01-01', 'ACTIVE'),
        (1, 1, 200000, 10.00, 24, '2025-01-01', 'ACTIVE'),
@@ -387,10 +360,66 @@ WHERE c.CustomerId >= 13 AND c.CustomerId % 7 = 0;
 GO
 
 -- ─────────────────────────────────────────────────────────────────────
--- 9. BalanceAfter ও Accounts.Balance হিসাব (Chapter 24: denormalized
---    balance সবসময় transaction-এর যোগফলের সাথে মিলতে হবে)
---    BalanceAfter = opening balance + সেই মুহূর্ত পর্যন্ত running total
+-- ▶ STEP 7: Support tables
+-- বইয়ের কিছু উদাহরণ এই table গুলোতে লেখে (Chapter 12, 15, 18)।
+-- CustomerStaging-এ MERGE practice-এর ৩টা row।
 -- ─────────────────────────────────────────────────────────────────────
+USE BankDB;
+GO
+
+-- Chapter 12: INSERT ... SELECT archive উদাহরণ
+CREATE TABLE dbo.ArchivedTransactions (
+    TxnId     BIGINT        NOT NULL PRIMARY KEY,
+    AccountId BIGINT        NOT NULL,
+    TxnDate   DATETIME2(3)  NOT NULL,
+    Amount    DECIMAL(19,4) NOT NULL
+);
+
+-- Chapter 12: MERGE উদাহরণের source
+CREATE TABLE dbo.CustomerStaging (
+    NationalId VARCHAR(20)   NOT NULL,
+    FullName   NVARCHAR(120) NOT NULL,
+    Email      NVARCHAR(160) NULL,
+    City       NVARCHAR(60)  NULL
+);
+
+-- Chapter 15: audit trigger এখানে লেখে
+CREATE TABLE dbo.AccountAudit (
+    AuditId    BIGINT        NOT NULL IDENTITY(1,1) PRIMARY KEY,
+    AccountId  BIGINT        NOT NULL,
+    OldBalance DECIMAL(19,4) NULL,
+    NewBalance DECIMAL(19,4) NULL,
+    OldStatus  VARCHAR(10)   NULL,
+    NewStatus  VARCHAR(10)   NULL,
+    ChangedBy  NVARCHAR(128) NOT NULL,
+    ChangedAt  DATETIME2(3)  NOT NULL
+);
+
+-- Chapter 18: CATCH block এখানে error log করে
+CREATE TABLE dbo.ErrorLog (
+    ErrorLogId     INT            NOT NULL IDENTITY(1,1) PRIMARY KEY,
+    ErrorNumber    INT            NULL,
+    ErrorMessage   NVARCHAR(4000) NULL,
+    ErrorProcedure NVARCHAR(128)  NULL,
+    ErrorLine      INT            NULL,
+    LoggedAt       DATETIME2(3)   NOT NULL
+);
+GO
+
+INSERT INTO dbo.CustomerStaging (NationalId, FullName, Email, City)
+VALUES ('1990123456', N'Rahim Uddin Khan', N'rahim.khan@example.com', N'Dhaka'),
+       ('1985987654', N'Karim Hossain',    N'karim@example.com',      N'Dhaka'),
+       ('2002777888', N'Mitu Akter',       N'mitu@example.com',       N'Barishal');
+GO
+
+-- ─────────────────────────────────────────────────────────────────────
+-- ▶ STEP 8: Balance হিসাব
+-- BalanceAfter = opening balance + running total (window function)।
+-- তারপর Accounts.Balance = শেষ transaction-এর BalanceAfter।
+-- ─────────────────────────────────────────────────────────────────────
+USE BankDB;
+GO
+
 SELECT t.TxnId,
        a.Balance + SUM(CASE WHEN t.TxnType = 'CREDIT' THEN t.Amount ELSE -t.Amount END)
            OVER (PARTITION BY t.AccountId ORDER BY t.TxnDate, t.TxnId
@@ -416,20 +445,12 @@ DROP TABLE #RunningBalance;
 GO
 
 -- ─────────────────────────────────────────────────────────────────────
--- 10. CustomerStaging — Chapter 12 MERGE-এর জন্য
---     Rahim: নাম/email বদলেছে → UPDATE হবে
---     Karim: কিছুই বদলায়নি → কিছু হবে না
---     Mitu:  নতুন → INSERT হবে
+-- ▶ STEP 9: যাচাই
+-- প্রতিটা table-এ কত row লোড হলো।
 -- ─────────────────────────────────────────────────────────────────────
-INSERT INTO dbo.CustomerStaging (NationalId, FullName, Email, City)
-VALUES ('1990123456', N'Rahim Uddin Khan', N'rahim.khan@example.com', N'Dhaka'),
-       ('1985987654', N'Karim Hossain',    N'karim@example.com',      N'Dhaka'),
-       ('2002777888', N'Mitu Akter',       N'mitu@example.com',       N'Barishal');
+USE BankDB;
 GO
 
--- ─────────────────────────────────────────────────────────────────────
--- 11. যাচাই — প্রতিটা table-এ কত row
--- ─────────────────────────────────────────────────────────────────────
 SELECT 'Branches'             AS TableName, COUNT(*) AS RowsLoaded FROM dbo.Branches
 UNION ALL SELECT 'Employees',            COUNT(*) FROM dbo.Employees
 UNION ALL SELECT 'Customers',            COUNT(*) FROM dbo.Customers

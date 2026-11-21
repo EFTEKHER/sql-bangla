@@ -372,3 +372,10 @@ td.hit { outline: 2px solid var(--pri); outline-offset: -2px; background: var(--
 #scriptview { border-radius: 10px; margin-top: 10px; max-height: 70vh; }
 .codebar .cb-link { color: #94a3b8; text-decoration: none; }
 .codebar .cb-link:hover { color: #e2e8f0; text-decoration: underline; }
+
+/* schema page */
+.stepno { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, var(--pri), var(--pri-2)); color: #fff; font-size: 1rem; margin-right: 6px; vertical-align: middle; }
+.learn { margin: 10px 0; padding: 8px 12px; border-radius: 10px; background: var(--ok-soft); font-size: .92rem; }
+#steps .tbl td:nth-child(2) code, #steps .tbl td:first-child code { white-space: nowrap; }
+#steps .codebox pre.code { max-height: 520px; }
+@media (max-width: 900px) { .card > .tbl, .card .bn + .tbl, #steps .tbl { display: block; overflow-x: auto; white-space: nowrap; } #steps .tbl td:last-child { white-space: normal; min-width: 180px; } }
