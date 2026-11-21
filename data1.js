@@ -100,6 +100,12 @@ ORDER BY TxnCount DESC;`,
   pages: "5–8",
   sections: [
     {
+      t: "✍️ সব Table + Data — হাতে লেখার code (SSMS-এ চালাও)",
+      bn: "বইয়ের পুরো BankDB database এখানে, <b>৯টা ধাপে</b>। প্রতিটা ধাপে একটা table-এর <code>CREATE TABLE</code> আর তার data-র <code>INSERT … VALUES</code>। <b>ধাপ ০ থেকে ৮ ক্রমানুসারে</b> নিজের SSMS-এ লেখো (বা 📋 কপি করো) আর <code>F5</code> চাপো। প্রতিটা কলামের মানে জানতে <a href=\"#/schema\">📐 Schema ও Data পেজ</a> দেখো।",
+      en: "The full BankDB schema and data as plain CREATE TABLE + INSERT ... VALUES, in 9 steps. Type or paste them into SSMS in order.",
+      viz: "fullSchema"
+    },
+    {
       t: "BankDB — আমাদের ব্যাংক ডাটাবেস",
       bn: "পুরো বই একটা ছোট্ট ব্যাংকিং স্কিমা <b>BankDB</b>-এর উপর চলে। নিচের diagram-এ table-এ ক্লিক করো — কলাম আর সম্পর্ক দেখো।",
       en: "Every example runs on BankDB: Branches, Employees, Customers, Accounts, Transactions, Loans.",

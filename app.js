@@ -46,7 +46,7 @@ function renderChapter(id) {
   const main = $('#main');
   main.innerHTML = `<div class="ch-head"><div class="crumb">${p.icon} Part ${p.id} · ${p.bn} · বই পৃষ্ঠা ${c.pages}</div>
     <h1><span class="ch-ic">${c.icon}</span> ${c.id}. ${c.bn}</h1><div class="en-title">${c.en}</div>
-    <div class="ch-meta"><span class="pill">⏱ ${BN(MIN[c.id])} মিনিট</span><span class="pill">${BN(c.sections.length)} টপিক</span><span class="pill">${BN(c.quiz.length)} কুইজ</span></div>
+    <div class="ch-meta"><a class="pill pill-link" href="#/ch/2">✍️ সব Table + Data code</a><span class="pill">⏱ ${BN(MIN[c.id])} মিনিট</span><span class="pill">${BN(c.sections.length)} টপিক</span><span class="pill">${BN(c.quiz.length)} কুইজ</span></div>
     <div class="toc">${c.sections.map((s, i) => `<a href="#sec-${i}" data-sec="${i}">${s.t}</a>`).join('')}</div></div>
     ${c.sections.map((s, i) => section(s, i)).join('')}
     <section class="card quiz-wrap" id="quiz"><h2>🧩 কুইজ — নিজেকে যাচাই করো</h2><div class="quiz"></div></section>
@@ -100,7 +100,7 @@ function home() {
     <h1>SQL শেখো <span class="grad">সহজ বাংলায়</span>,<br>ইন্টারঅ্যাক্টিভভাবে — <span class="grad">৩ ঘণ্টায়</span></h1>
     <p>প্রতিটা টপিক: ছোট বাংলা ব্যাখ্যা + English লাইন + 🧠 মনে রাখার কৌশল + 🎮 ভিজুয়ালাইজেশন + ▶ ব্রাউজারেই আসল SQL চালাও + 🧩 কুইজ।</p>
     <div class="hero-btns"><a class="btn pri lg" href="#/plan">⏱ ৩-ঘণ্টার প্ল্যান শুরু করো</a><a class="btn lg" href="#/schema">📐 Schema ও Data — copy-paste</a><a class="btn lg" href="#/ch/${nextCh.id}">${done.size ? '▶ চালিয়ে যাও: ' + nextCh.bn : '📖 অধ্যায় ১ থেকে শুরু'}</a></div></section>
-    <section class="card"><h2>🧠 সবচেয়ে গুরুত্বপূর্ণ একটা জিনিস</h2><div class="bn">SQL তুমি যে order-এ লেখো, ডাটাবেস সেভাবে চালায় না। এটা মুখস্থ করলে অর্ধেক নিয়ম নিজেই বোঝা যায়:</div>
+    <a class="card banner" href="#/ch/2"><span class="banner-ic">✍️</span><span><b>BankDB-এর সব Table + Data code — হাতে লিখে শেখো</b><br><small>CREATE TABLE + INSERT … VALUES, ৯টা ধাপে · Chapter 2-এ আছে · SSMS-এ কপি/লিখে চালাও</small></span><span class="banner-go">খোলো →</span></a><section class="card"><h2>🧠 সবচেয়ে গুরুত্বপূর্ণ একটা জিনিস</h2><div class="bn">SQL তুমি যে order-এ লেখো, ডাটাবেস সেভাবে চালায় না। এটা মুখস্থ করলে অর্ধেক নিয়ম নিজেই বোঝা যায়:</div>
       <div class="order-strip">${['FROM', 'WHERE', 'GROUP BY', 'HAVING', 'SELECT', 'DISTINCT', 'ORDER BY', 'LIMIT'].map((x, i) => `<span><b>${BN(i + 1)}</b>${x}</span>`).join('')}</div>
       <div class="mem"><b>🧠 Mnemonic</b><div><b>F</b>resh <b>W</b>ater <b>G</b>ives <b>H</b>ealthy <b>S</b>kin, <b>D</b>rink <b>O</b>nly <b>L</b>emon</div></div></section>
     <div class="parts">${PARTS.map(p => { const cs = CHAPTERS.filter(c => c.part === p.id); const m = cs.reduce((s, c) => s + MIN[c.id], 0); const d = cs.filter(c => done.has(c.id)).length;
@@ -298,6 +298,23 @@ function copyText(text) {
     try { document.execCommand('copy') ? res() : rej(); } catch (e) { rej(e); } finally { ta.remove(); }
   });
 }
+// Chapter 2-এর ভিতরে পুরো schema + data (ছোট version) দেখায়
+V.fullSchema = (el) => {
+  el.innerHTML = '<div class="muted">লোড হচ্ছে…</div>';
+  fetch('bankdb-simple.sql').then(r => { if (!r.ok) throw 0; return r.text(); }).then(sql => {
+    const parts = sql.split(/(?=-- ─{69}\n-- ▶ STEP )/).filter(p => p.includes('▶ STEP'));
+    el.innerHTML = `<div class="row2"><button class="btn pri sm" data-all>📋 সব ধাপ একসাথে কপি</button><a class="btn sm" href="bankdb-simple.sql" download>⬇️ .sql ডাউনলোড</a><a class="btn sm" href="#/schema">📐 কলামের মানে সহ দেখো</a></div>` +
+      parts.map((code, i) => {
+        const title = (code.match(/▶ STEP \d+: (.+)/) || [])[1] || '';
+        return `<details class="fs" ${i <= 1 ? 'open' : ''}><summary><span class="stepno sm">${BN(i)}</span> ${title} <span class="muted">· ${code.split('\n').length} লাইন</span></summary>
+          <div class="codebox"><div class="codebar"><span>ধাপ ${BN(i)}</span><span><button class="btn xs pri" data-i="${i}">📋 কপি</button></span></div><pre class="code">${hl(code)}</pre></div></details>`;
+      }).join('');
+    const done = b => { const o = b.textContent; b.textContent = '✓ কপি হয়েছে'; setTimeout(() => b.textContent = o, 1500); };
+    el.querySelectorAll('[data-i]').forEach(b => b.onclick = () => copyText(parts[+b.dataset.i]).then(() => done(b)));
+    el.querySelector('[data-all]').onclick = e => copyText(parts.join('\n')).then(() => done(e.target));
+  }, () => { el.innerHTML = '<div class="callout bad">লোড হয়নি — <a href="bankdb-simple.sql">bankdb-simple.sql</a> খোলো।</div>'; });
+};
+
 // ─── Schema ও Data page (copy-paste / হাতে লিখে local MSSQL-এ বানাও) ───
 const SCHEMA_VARIANTS = {
   simple: { file: 'bankdb-simple.sql', label: '✍️ ছোট version — হাতে লেখার জন্য', note: 'সব data সরাসরি <code>INSERT … VALUES</code>-এ লেখা — দেখে দেখে হাতে লেখা যায়। মোট ৯৪ row। বইয়ের প্রায় সব উদাহরণ এতেই চলে।', counts: 'Branches 6 · Employees 12 · Customers 12 · Accounts 13 · Transactions 42 · Loans 6 · CustomerStaging 3' },
