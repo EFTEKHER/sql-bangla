@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SQL বাংলায় শেখো</title>
+<meta name="description" content="SQL for Backend Engineers — সহজ বাংলা + English ব্যাখ্যা, ইন্টারঅ্যাক্টিভ ভিজুয়ালাইজেশন, ব্রাউজারে SQL playground, কুইজ ও ৩-ঘণ্টার স্টাডি প্ল্যান।">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗄️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-lang="both">
+<header class="top">
+  <button id="burger" class="icon-btn" aria-label="মেনু">☰</button>
+  <a href="#/" class="brand">🗄️ <span>SQL <b>বাংলায়</b></span></a>
+  <div class="searchbox"><input id="q" type="search" placeholder="🔍 খোঁজো: JOIN, NULL, index…" autocomplete="off"><div id="search-res" hidden></div></div>
+  <div id="timer" class="timer"></div>
+  <div id="lang" class="seg sm"><button data-l="both">বাংলা+EN</button><button data-l="bn">শুধু বাংলা</button></div>
+  <button id="theme" class="icon-btn" aria-label="থিম">🌙</button>
+</header>
+<div class="layout">
+  <aside id="side">
+    <div class="prog"><div class="prog-bar"><div id="prog-fill"></div></div><div id="prog-txt"></div></div>
+    <nav id="nav"></nav>
+  </aside>
+  <div id="scrim"></div>
+  <main id="main"></main>
+</div>
+<div id="drawer"><div class="drawer-head"><b>🧪 Playground</b><button class="icon-btn x" aria-label="বন্ধ">✕</button></div><div class="drawer-body"></div></div>
+<script src="data1.js"></script>
+<script src="data2.js"></script>
+<script src="data3.js"></script>
+<script src="viz.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
